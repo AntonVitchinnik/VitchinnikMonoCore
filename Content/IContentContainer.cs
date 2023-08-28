@@ -13,5 +13,6 @@ namespace VitchinnikMonoCore.Content
     public interface IContentPositionProvider 
     { 
         public event Action<Vector2> PositionProvider;
+        public int test();
     }
 }
