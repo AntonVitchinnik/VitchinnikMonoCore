@@ -1,0 +1,335 @@
+﻿using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework;
+using VitchinnikMonoCore.GUI;
+
+namespace VitchinnikMonoCore
+{
+    /// <summary>
+    /// Класс реализующий базовый функционал для всех игровых объектов
+    /// </summary>
+    public abstract class GameObject : DrawableGameComponent
+    {
+        /// <summary>
+        /// Поле, реализующее представление объекта
+        /// </summary>
+        /// <remarks>В конструкторе класса наследника нужно обязательно инициализировать это поле</remarks>
+        protected ObjectView _view;
+        /// <summary>
+        /// Поле, реализующее модель объекта
+        /// </summary>
+        /// <remarks>В конструкторе класса наследника нужно обязательно инициализировать это поле</remarks>
+        protected ObjectModel _model;
+        private Action<GameTime> _callUpdate;
+        protected event Action<GameTime> UpdateAction
+        {
+            add
+            {
+                _callUpdate += value;
+            }
+            remove
+            {
+                _callUpdate -= value;
+            }
+        }
+        private Action<GameTime> _callDraw;
+        protected event Action<GameTime> DrawAction
+        {
+            add
+            {
+                _callDraw += value;
+            }
+            remove
+            {
+                _callDraw -= value;
+            }
+        }
+        protected Action<Transition.Type, Vector2, float, float> _callMove;
+        private Action _tooltipShow;
+        private Action _tooltipHide;
+        public event Action EnableEvent;
+        public event Action DisableEvent;
+        public event Action HoverEntered;
+        public event Action HoverLeft;
+        public event Action ClickEvent;
+        public event Action ReleaseEvent;
+        private bool _clicked;
+        public bool Clicked => _clicked;
+        public Vector2? Position
+        {
+            get => _view?.Position;
+            set
+            {
+                if (_view == null)
+                    return;
+                _view.Position = value ?? Vector2.Zero;
+            }
+        }
+        public event Action<Vector2> ViewPositionChanged;
+        public bool IsHovered { get; private set; }
+        public GameObject() : base(Core.GameInstance)
+        {
+            Enabled = true;
+        }
+        public void Enable()
+        {
+            if (_model.Enabled)
+                return;
+            EnableEvent?.Invoke();
+        }
+        public void Disable()
+        {
+            if (!_model.Enabled)
+                return;
+            DisableEvent?.Invoke();
+        }
+        public void Toggle()
+        {
+            if (_model.Enabled)
+            {
+                Disable();
+            }
+            else
+            {
+                Enable();
+            }
+        }
+        private void HoverEnter()
+        {
+            IsHovered = true;
+            HoverEntered?.Invoke();
+            _tooltipShow?.Invoke();
+        }
+        private void HoverLeave()
+        {
+            IsHovered = false;
+            HoverLeft?.Invoke();
+            _tooltipHide?.Invoke();
+        }
+        public virtual bool Contains(Vector2 vector)
+        {
+            var output = Visible && _view?.Contains(vector) == true;
+            if (output && !IsHovered)
+            {
+                HoverEnter();
+                return output;
+            }
+            if (!output && IsHovered)
+            {
+                HoverLeave();
+            }
+            return output;
+        }
+        private void Click()
+        {
+            ClickEvent?.Invoke();
+            _clicked = true;
+        }
+        private void Release()
+        {
+            if (_clicked)
+            {
+                ReleaseEvent?.Invoke();
+                _clicked = false;
+                if (IsHovered)
+                    return;
+                UnbindClickInvokeAction();
+            }
+        }
+        internal void BindClickInvokeAction()
+        {
+            MouseHandler.LMBPressed += Click;
+            if (_clicked)
+                return;
+            MouseHandler.LMBReleased += Release;
+        }
+        internal void UnbindClickInvokeAction()
+        {
+            MouseHandler.LMBPressed -= Click;
+            if (_clicked)
+                return;
+            MouseHandler.LMBReleased -= Release;
+        }
+        public void Hide() => Visible = false;
+        public void Show() => Visible = true;
+        public void SetTooltip(Tooltip tooltip)
+        {
+            _tooltipShow = () => Tooltip.Actual = tooltip;
+            _tooltipHide = () => Tooltip.Actual = new NullTooltip();
+        }
+        public void Teleport(Vector2 target)
+        {
+            if (_view == null)
+                return;
+            _view.Position = target;
+        }
+        public void Move(Transition.Type type, Vector2 target, float time, float elastic = 1f)
+        {
+            _callMove?.Invoke(type, target, time, elastic);
+        }
+        protected void InvokePositionChange(Vector2 vector) => ViewPositionChanged?.Invoke(vector);
+        public override void Update(GameTime gameTime)
+        {
+            _callUpdate?.Invoke(gameTime);
+        }
+        public override void Draw(GameTime gameTime)
+        {
+            _callDraw?.Invoke(gameTime);
+        }
+        protected abstract class ObjectView
+        {
+            protected Texture2D _texture;
+            public Texture2D Texture => _texture;
+            private Vector2 _position;
+            public Vector2 Position
+            {
+                get => _position;
+                protected internal set
+                {
+                    if (_position.Equals(value))
+                        return;
+                    _position = value;
+                    PositionChanged?.Invoke(value);
+                }
+            }
+            protected Vector2 _offset;
+            public event Action<Vector2> PositionChanged;
+            /// <summary>
+            /// Стандартный конструктор представления игрового объекта с начальной позицией 0, 0
+            /// </summary>
+            /// <param name="controlsSource">Источник управляющей логики</param>
+            /// <param name="path">Путь к текстуре</param>
+            public ObjectView(GameObject controlsSource, string path)
+            {
+                if (LoadContent(path))
+                {
+                    controlsSource._callDraw += Draw;
+                    controlsSource._callMove += Move;
+                    PositionChanged += controlsSource.InvokePositionChange;
+                }
+            }
+            /// <summary>
+            /// Конструктор представления игрового объекта с указанной начальной позицией
+            /// </summary>
+            /// <param name="controlsSource">Источник управляющей логики</param>
+            /// <param name="path">Путь к текстуре</param>
+            /// <param name="position">Начальная позиция игрового объекта</param>
+            public ObjectView(GameObject controlsSource, string path, Vector2 position) : this(controlsSource, path)
+            {
+                _position = position;
+            }
+            /// <summary>
+            /// Конструктор представления игрового объекта с провайдером текстур и начальным положением 0, 0
+            /// </summary>
+            /// <param name="controlsSource">Источник управляющей логики</param>
+            /// <param name="path">Путь к начальной текстуре представления</param>
+            /// <param name="textureProvider">Провайдер текстур</param>
+            public ObjectView(GameObject controlsSource, string path, ref Action<Texture2D> textureProvider):this(controlsSource, path)
+            {
+                textureProvider += (Texture2D texture) => _texture = texture; 
+            }
+            /// <summary>
+            /// Конструктор представления игрового объекта с провайдером текстур и указанной начальной позицией
+            /// </summary>
+            /// <param name="controlsSource">Источник управляющей логики</param>
+            /// <param name="path">Путь к начальной текстуре представления</param>
+            /// <param name="position">Начальная позиция игрового объекта</param>
+            /// <param name="textureProvider">Провайдер текстур</param>
+            public ObjectView(GameObject controlsSource, string path, Vector2 position, ref Action<Texture2D> textureProvider) : this(controlsSource, path, position)
+            {
+                textureProvider += (Texture2D texture) => _texture = texture;
+            }
+            protected bool LoadContent(string path)
+            {
+                try
+                {
+                    _texture = Core.ContentManagerInstance.Load<Texture2D>(path);
+                }
+                catch
+                {
+                    //Log.Message("resource " + path + " doesn't exist.");
+                    return false;
+                }
+                return true;
+            }
+            public virtual bool Contains(Vector2 vector)
+            {
+                return _texture.Bounds.Contains((int)(vector.X - _position.X - _offset.X), (int)(vector.Y - _position.Y - _offset.Y));
+            }
+            protected void Move(Transition.Type type, Vector2 target, float time, float elastic = 1f)
+            {
+                Core.GameInstance.Components.Add(new Transition(type, Position, target, time, (Vector2 vector) => { Position = vector; }, elastic));
+            }
+            protected virtual void Draw(GameTime gameTime)
+            {
+                Core.SpriteBatchInstance.Begin(samplerState: SamplerState.PointClamp);
+                Core.SpriteBatchInstance.Draw(_texture, _position, null, Color.White, 0f, _offset, 1f, 0, 1);
+                Core.SpriteBatchInstance.End();
+            }
+        }
+        protected abstract class ObjectModel
+        {
+            private bool _enabled;
+            public bool Enabled => _enabled;
+            public ObjectModel(GameObject controlsSource)
+            {
+                _enabled = false;
+                controlsSource.EnableEvent += () =>
+                {
+                    _enabled = true;
+                    OnEnable();
+                    controlsSource._callUpdate += OnUpdate;
+                };
+                controlsSource.DisableEvent += () =>
+                {
+                    _enabled = false;
+                    controlsSource._callUpdate -= OnUpdate;
+                    OnDisable();
+                };
+                controlsSource.HoverEntered += () =>
+                {
+                    OnHoverEnter();
+                    controlsSource._callUpdate += OnHover;
+                };
+                controlsSource.HoverLeft += () =>
+                {
+                    OnHoverExit();
+                    controlsSource._callUpdate -= OnHover;
+                };
+                controlsSource.ClickEvent += OnClick;
+                controlsSource.ReleaseEvent += OnRelease;
+            }
+            protected virtual void OnEnable()
+            {
+
+            }
+            protected virtual void OnUpdate(GameTime gameTime)
+            {
+
+            }
+            protected virtual void OnDisable()
+            {
+
+            }
+            protected virtual void OnHoverEnter()
+            {
+
+            }
+            protected virtual void OnHover(GameTime gameTime)
+            {
+
+            }
+            protected virtual void OnHoverExit()
+            {
+
+            }
+            protected virtual void OnClick()
+            {
+
+            }
+            protected virtual void OnRelease()
+            {
+
+            }
+        }
+    }
+}
