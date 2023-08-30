@@ -1,5 +1,6 @@
 ﻿using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework;
+using MonoGame.Extended;
 using VitchinnikMonoCore.GUI;
 
 namespace VitchinnikMonoCore
@@ -65,7 +66,7 @@ namespace VitchinnikMonoCore
             }
         }
         public event Action<Vector2> ViewPositionChanged;
-        public bool IsHovered { get; private set; }
+        public bool IsHovered { get; private protected set; }
         public GameObject() : base(Core.GameInstance)
         {
             Enabled = true;
@@ -97,13 +98,11 @@ namespace VitchinnikMonoCore
         {
             IsHovered = true;
             HoverEntered?.Invoke();
-            _tooltipShow?.Invoke();
         }
         private void HoverLeave()
         {
             IsHovered = false;
             HoverLeft?.Invoke();
-            _tooltipHide?.Invoke();
         }
         public virtual bool Contains(Vector2 vector)
         {
@@ -119,12 +118,12 @@ namespace VitchinnikMonoCore
             }
             return output;
         }
-        private void Click()
+        private protected virtual void Click()
         {
             ClickEvent?.Invoke();
             _clicked = true;
         }
-        private void Release()
+        private protected virtual void Release()
         {
             if (_clicked)
             {
@@ -137,6 +136,7 @@ namespace VitchinnikMonoCore
         }
         internal void BindClickInvokeAction()
         {
+            _tooltipShow?.Invoke();
             MouseHandler.LMBPressed += Click;
             if (_clicked)
                 return;
@@ -144,6 +144,7 @@ namespace VitchinnikMonoCore
         }
         internal void UnbindClickInvokeAction()
         {
+            _tooltipHide?.Invoke();
             MouseHandler.LMBPressed -= Click;
             if (_clicked)
                 return;
@@ -167,6 +168,11 @@ namespace VitchinnikMonoCore
             _callMove?.Invoke(type, target, time, elastic);
         }
         protected void InvokePositionChange(Vector2 vector) => ViewPositionChanged?.Invoke(vector);
+        public virtual void SetCamera(OrthographicCamera camera)
+        {
+            if (_view is null) return;
+            _view.Camera = camera;
+        }
         public override void Update(GameTime gameTime)
         {
             _callUpdate?.Invoke(gameTime);
@@ -180,6 +186,24 @@ namespace VitchinnikMonoCore
             protected Texture2D _texture;
             public Texture2D Texture => _texture;
             private Vector2 _position;
+            private OrthographicCamera _camera = null;
+            public OrthographicCamera Camera
+            {
+                get => _camera;
+                set
+                {
+                    _camera = value;
+                    if(value is null)
+                    {
+                        DrawPosition = () => Position;
+                    }
+                    else
+                    {
+                        DrawPosition = () => _camera.WorldToScreen(Position);
+                    }
+                }
+            }
+            protected Func<Vector2> DrawPosition;
             public Vector2 Position
             {
                 get => _position;
@@ -205,6 +229,7 @@ namespace VitchinnikMonoCore
                     controlsSource._callDraw += Draw;
                     controlsSource._callMove += Move;
                     PositionChanged += controlsSource.InvokePositionChange;
+                    DrawPosition = () => Position;
                 }
             }
             /// <summary>
@@ -262,17 +287,16 @@ namespace VitchinnikMonoCore
             protected virtual void Draw(GameTime gameTime)
             {
                 Core.SpriteBatchInstance.Begin(samplerState: SamplerState.PointClamp);
-                Core.SpriteBatchInstance.Draw(_texture, _position, null, Color.White, 0f, _offset, 1f, 0, 1);
+                Core.SpriteBatchInstance.Draw(_texture, DrawPosition.Invoke(), null, Color.White, 0f, _offset, 1f, 0, 1);
                 Core.SpriteBatchInstance.End();
             }
         }
         protected abstract class ObjectModel
         {
-            private bool _enabled;
+            private protected bool _enabled = false;
             public bool Enabled => _enabled;
             public ObjectModel(GameObject controlsSource)
             {
-                _enabled = false;
                 controlsSource.EnableEvent += () =>
                 {
                     _enabled = true;
@@ -297,6 +321,10 @@ namespace VitchinnikMonoCore
                 };
                 controlsSource.ClickEvent += OnClick;
                 controlsSource.ReleaseEvent += OnRelease;
+            }
+            protected ObjectModel()
+            {
+
             }
             protected virtual void OnEnable()
             {
