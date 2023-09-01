@@ -1,5 +1,6 @@
 ﻿using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework;
+using VitchinnikMonoCore.GUI;
 
 namespace VitchinnikMonoCore.Content
 {
@@ -22,8 +23,10 @@ namespace VitchinnikMonoCore.Content
             {
                 _margin = value;
                 _offset = Vector2.Zero;
+                LastAlignment = null;
             }
         }
+        private Action LastAlignment;
         public Action<GameTime> DrawAction => Draw;
         public ObjectContent(string text, SpriteFont font)
         {
@@ -53,7 +56,12 @@ namespace VitchinnikMonoCore.Content
             _centreOffset += () => _offset = Image.Bounds.Size.ToVector2() / 2f;
             if (LoadImage(path))
             {
-
+                _drawAction += () =>
+                {
+                    Core.SpriteBatchInstance.Begin(samplerState: SamplerState.PointClamp);
+                    Core.SpriteBatchInstance.Draw(Image, Position + Margin, null, Color.White, 0f, _offset, 1f, 0, 1);
+                    Core.SpriteBatchInstance.End();
+                };
             }
         }
         public ObjectContent(ref Action<string> textProvider, SpriteFont font) : this("", font)
@@ -61,13 +69,19 @@ namespace VitchinnikMonoCore.Content
             textProvider += (string text) =>
             {
                 this.Text = text;
+                LastAlignment?.Invoke();
                 _centreAction?.Invoke();
             };
         }
         // Необходимо добавить некоторую стартовую картинку для варианта с провайдером изображений
-        public ObjectContent(ref Action<Texture2D> imageProvider)
+        public ObjectContent(ref Action<Texture2D> imageProvider) : this("null_image")
         {
-            imageProvider += (Texture2D image) => this.Image = image;
+            imageProvider += (Texture2D image) =>
+            {
+                this.Image = image;
+                LastAlignment?.Invoke();
+                _centreAction?.Invoke();
+            };
         }
         private bool LoadImage(string path)
         {
@@ -92,9 +106,17 @@ namespace VitchinnikMonoCore.Content
         {
             Position = container.Position;
             _centreAction = () => {
-                Position = container.Position;
-                _margin = container.Dimentions / 2f;
+                if(container is IContentPositionProvider)
+                {
+                    Position = (container as IContentPositionProvider).GetPosition();
+                }
+                else
+                {
+                    Position = container.Position;
+                }               
             };
+            _centreAction.Invoke();
+            _centreOffset += () => _margin = container.Dimentions / 2f;
             Action<Vector2> setPos = (Vector2 vector) => Position = vector;
             if(_owner != null)
             {
@@ -105,17 +127,20 @@ namespace VitchinnikMonoCore.Content
                     (_owner as IContentPositionProvider).PositionProvider -= setPos;
                 }
             }         
-            container.PositionChanged += setPos;
             container.CallContent += Draw;
             if(container is IContentPositionProvider)
             {
                 (container as IContentPositionProvider).PositionProvider += setPos;
             }
+            else
+            {
+                container.PositionChanged += setPos;
+            }
             _owner = container;
         }
         public void AllignCentre()
         {
-            _centreAction?.Invoke();
+            LastAlignment = AllignCentre;
             _centreOffset.Invoke();
         }
         internal void Draw(GameTime gameTime)

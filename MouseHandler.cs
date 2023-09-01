@@ -63,14 +63,14 @@ namespace VitchinnikMonoCore
         /// <summary>
         /// Список объектов, на которых находится курсор мыши
         /// </summary>
-        public static List<GameObject> _HoveredObjects { get; private set; }
+        public static List<GameObject> HoveredObjects { get; private set; }
         public static GameObject LastBindedObject { get; private set; }
         /// <summary>
         /// Инициализация настроек обработчика мыши
         /// </summary>
         public static void Initialize()
         {
-            _HoveredObjects = new List<GameObject>();
+            HoveredObjects = new List<GameObject>();
             _actualMouseState = Mouse.GetState();
             Enable();
             MouseStateChanged = (GameTime gameTime, MouseState previousMouseState, MouseState newMouseState) =>
@@ -115,20 +115,20 @@ namespace VitchinnikMonoCore
             {
                 if (graphicsObject.Contains(mousePosition))
                 {
-                    if (!_HoveredObjects.Contains(graphicsObject))
-                        _HoveredObjects.Add(graphicsObject);
+                    if (!HoveredObjects.Contains(graphicsObject))
+                        HoveredObjects.Add(graphicsObject);
                     continue;
                 }
-                _HoveredObjects.Remove(graphicsObject);
+                HoveredObjects.Remove(graphicsObject);
             }
-            if (_HoveredObjects.Count > 0)
+            if (HoveredObjects.Count > 0)
             {
-                _HoveredObjects.Sort(new Comparison<GameObject>(_SortHovered));
-                if (!_HoveredObjects[0].Equals(LastBindedObject))
+                HoveredObjects.Sort(new Comparison<GameObject>(_SortHovered));
+                if (!HoveredObjects[0].Equals(LastBindedObject))
                 {
                     LastBindedObject?.UnbindClickInvokeAction();
-                    _HoveredObjects[0].BindClickInvokeAction();
-                    LastBindedObject = _HoveredObjects[0];
+                    HoveredObjects[0].BindClickInvokeAction();
+                    LastBindedObject = HoveredObjects[0];
                 }
                 return;
             }
@@ -199,7 +199,7 @@ namespace VitchinnikMonoCore
         }
         public static void Reset()
         {
-            _HoveredObjects = new List<GameObject>();
+            HoveredObjects = new List<GameObject>();
             LastBindedObject?.UnbindClickInvokeAction();
             LastBindedObject = null;
             LMBPressed = null;

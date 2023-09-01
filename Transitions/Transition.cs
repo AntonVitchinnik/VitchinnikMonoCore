@@ -5,58 +5,78 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace VitchinnikMonoCore
+namespace VitchinnikMonoCore.Transitions
 {
     public class Transition : IGameComponent, IUpdateable
     {
         private Action<GameTime> _updateAction;
         private float _cummulativeTime;
-        public Transition(Type type, Vector2 start, Vector2 target, float time, Action<Vector2> positionAccessor, float elastic = 1f)
+        public Transition(Type type, Vector2 start, Vector2 target, float time, Action<Vector2> positionAccessor, float elastic = 1f, Action onExpired = null, TransitionTerminationToken terminationToken = null)
         {
+            if(terminationToken != null)
+            {
+                var terminate = () =>
+                {
+                    Core.GameInstance.Components.Remove(this);
+                };
+                terminate += () => terminationToken.OnTerminate -= terminate;
+                terminationToken.OnTerminate += terminate;
+                
+                var forceExpire = () =>
+                {
+                    Core.GameInstance.Components.Remove(this);
+                    onExpired?.Invoke();
+                };
+                forceExpire += () => terminationToken.OnForcedExpiration -= forceExpire;
+                terminationToken.OnForcedExpiration += forceExpire;
+            }
             Vector2 deltaPosition = target - start;
             switch (type)
             {
                 case Type.Linear:
-                    _updateAction = (GameTime gameTime) =>
+                    _updateAction = (gameTime) =>
                     {
                         if (_cummulativeTime + (float)gameTime.ElapsedGameTime.TotalSeconds < time)
                         {
                             _cummulativeTime += (float)gameTime.ElapsedGameTime.TotalSeconds;
-                            positionAccessor.Invoke(Vector2.Floor(start + deltaPosition * _cummulativeTime / time));
+                            positionAccessor.Invoke(start + deltaPosition * _cummulativeTime / time);
                             return;
                         }
                         positionAccessor.Invoke(target);
+                        onExpired?.Invoke();
                         Core.GameInstance.Components.Remove(this);
                     };
                     break;
                 case Type.EaseIn:
-                    _updateAction = (GameTime gameTime) =>
+                    _updateAction = (gameTime) =>
                     {
                         if (_cummulativeTime + (float)gameTime.ElapsedGameTime.TotalSeconds < time)
                         {
                             _cummulativeTime += (float)gameTime.ElapsedGameTime.TotalSeconds;
-                            positionAccessor.Invoke(Vector2.Floor(start + deltaPosition * (float)Math.Pow(_cummulativeTime / time, 2)));
+                            positionAccessor.Invoke(start + deltaPosition * (float)Math.Pow(_cummulativeTime / time, 2));
                             return;
                         }
                         positionAccessor.Invoke(target);
+                        onExpired?.Invoke();
                         Core.GameInstance.Components.Remove(this);
                     };
                     break;
                 case Type.EaseOut:
-                    _updateAction = (GameTime gameTime) =>
+                    _updateAction = (gameTime) =>
                     {
                         if (_cummulativeTime + (float)gameTime.ElapsedGameTime.TotalSeconds < time)
                         {
                             _cummulativeTime += (float)gameTime.ElapsedGameTime.TotalSeconds;
-                            positionAccessor.Invoke(Vector2.Floor(target - deltaPosition * (float)Math.Pow(1f - _cummulativeTime / time, 2)));
+                            positionAccessor.Invoke(target - deltaPosition * (float)Math.Pow(1f - _cummulativeTime / time, 2));
                             return;
                         }
                         positionAccessor.Invoke(target);
+                        onExpired?.Invoke();
                         Core.GameInstance.Components.Remove(this);
                     };
                     break;
                 case Type.EaseInOut:
-                    _updateAction = (GameTime gameTime) =>
+                    _updateAction = (gameTime) =>
                     {
                         if (_cummulativeTime + (float)gameTime.ElapsedGameTime.TotalSeconds < time)
                         {
@@ -64,37 +84,39 @@ namespace VitchinnikMonoCore
                             var easeOut = target - deltaPosition * (float)Math.Pow(1f - _cummulativeTime / time, 2);
                             var easeIn = start + deltaPosition * (float)Math.Pow(_cummulativeTime / time, 2);
 
-                            positionAccessor.Invoke(Vector2.Floor(Vector2.Lerp(easeOut, easeIn, _cummulativeTime / time)));
+                            positionAccessor.Invoke(Vector2.Lerp(easeOut, easeIn, _cummulativeTime / time));
                             return;
                         }
                         positionAccessor.Invoke(target);
+                        onExpired?.Invoke();
                         Core.GameInstance.Components.Remove(this);
                     };
                     break;
                 case Type.ElasticIn:
-                    _updateAction = (GameTime gameTime) =>
+                    _updateAction = (gameTime) =>
                     {
                         if (_cummulativeTime + (float)gameTime.ElapsedGameTime.TotalSeconds < time)
                         {
                             _cummulativeTime += (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-                            positionAccessor.Invoke(Vector2.Floor(start + deltaPosition * (float)Math.Pow(_cummulativeTime / time, 2) * ((1 + elastic) * _cummulativeTime / time - elastic)));
+                            positionAccessor.Invoke(start + deltaPosition * (float)Math.Pow(_cummulativeTime / time, 2) * ((1 + elastic) * _cummulativeTime / time - elastic));
                             return;
                         }
                         positionAccessor.Invoke(target);
+                        onExpired?.Invoke();
                         Core.GameInstance.Components.Remove(this);
                     };
                     break;
             }
 
         }
-        public Transition(Type type, float start, float target, float time, Action<float> valueAccessor, float elastic = 1f)
+        public Transition(Type type, float start, float target, float time, Action<float> valueAccessor, float elastic = 1f, Action onExpired = null)
         {
             float deltaValue = target - start;
             switch (type)
             {
                 case Type.Linear:
-                    _updateAction = (GameTime gameTime) =>
+                    _updateAction = (gameTime) =>
                     {
                         if (_cummulativeTime + (float)gameTime.ElapsedGameTime.TotalSeconds < time)
                         {
@@ -103,11 +125,12 @@ namespace VitchinnikMonoCore
                             return;
                         }
                         valueAccessor.Invoke(target);
+                        onExpired?.Invoke();
                         Core.GameInstance.Components.Remove(this);
                     };
                     break;
                 case Type.EaseIn:
-                    _updateAction = (GameTime gameTime) =>
+                    _updateAction = (gameTime) =>
                     {
                         if (_cummulativeTime + (float)gameTime.ElapsedGameTime.TotalSeconds < time)
                         {
@@ -116,11 +139,12 @@ namespace VitchinnikMonoCore
                             return;
                         }
                         valueAccessor.Invoke(target);
+                        onExpired?.Invoke();
                         Core.GameInstance.Components.Remove(this);
                     };
                     break;
                 case Type.EaseOut:
-                    _updateAction = (GameTime gameTime) =>
+                    _updateAction = (gameTime) =>
                     {
                         if (_cummulativeTime + (float)gameTime.ElapsedGameTime.TotalSeconds < time)
                         {
@@ -129,11 +153,12 @@ namespace VitchinnikMonoCore
                             return;
                         }
                         valueAccessor.Invoke(target);
+                        onExpired?.Invoke();
                         Core.GameInstance.Components.Remove(this);
                     };
                     break;
                 case Type.EaseInOut:
-                    _updateAction = (GameTime gameTime) =>
+                    _updateAction = (gameTime) =>
                     {
                         if (_cummulativeTime + (float)gameTime.ElapsedGameTime.TotalSeconds < time)
                         {
@@ -145,11 +170,12 @@ namespace VitchinnikMonoCore
                             return;
                         }
                         valueAccessor.Invoke(target);
+                        onExpired?.Invoke();
                         Core.GameInstance.Components.Remove(this);
                     };
                     break;
                 case Type.ElasticIn:
-                    _updateAction = (GameTime gameTime) =>
+                    _updateAction = (gameTime) =>
                     {
                         if (_cummulativeTime + (float)gameTime.ElapsedGameTime.TotalSeconds < time)
                         {
@@ -159,6 +185,7 @@ namespace VitchinnikMonoCore
                             return;
                         }
                         valueAccessor.Invoke(target);
+                        onExpired?.Invoke();
                         Core.GameInstance.Components.Remove(this);
                     };
                     break;
