@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework;
 using MonoGame.Extended;
 using VitchinnikMonoCore.GUI;
+using VitchinnikMonoCore.Transitions;
 
 namespace VitchinnikMonoCore
 {
@@ -44,7 +45,7 @@ namespace VitchinnikMonoCore
                 _callDraw -= value;
             }
         }
-        protected Action<Transition.Type, Vector2, float, float> _callMove;
+        protected Action<Transition.Type, Vector2, float, float, Action, TransitionTerminationToken> _callMove;
         private Action _tooltipShow;
         private Action _tooltipHide;
         public event Action EnableEvent;
@@ -163,9 +164,9 @@ namespace VitchinnikMonoCore
                 return;
             _view.Position = target;
         }
-        public void Move(Transition.Type type, Vector2 target, float time, float elastic = 1f)
+        public void Move(Transition.Type type, Vector2 target, float time, float elastic = 1f, Action onExpired = null, TransitionTerminationToken terminationToken = null)
         {
-            _callMove?.Invoke(type, target, time, elastic);
+            _callMove?.Invoke(type, target, time, elastic, onExpired, terminationToken);
         }
         protected void InvokePositionChange(Vector2 vector) => ViewPositionChanged?.Invoke(vector);
         public virtual void SetCamera(OrthographicCamera camera)
@@ -280,9 +281,9 @@ namespace VitchinnikMonoCore
             {
                 return _texture.Bounds.Contains((int)(vector.X - _position.X - _offset.X), (int)(vector.Y - _position.Y - _offset.Y));
             }
-            protected void Move(Transition.Type type, Vector2 target, float time, float elastic = 1f)
+            protected void Move(Transition.Type type, Vector2 target, float time, float elastic = 1f, Action onExpired = null, TransitionTerminationToken terminationToken = null)
             {
-                Core.GameInstance.Components.Add(new Transition(type, Position, target, time, (Vector2 vector) => { Position = vector; }, elastic));
+                Core.GameInstance.Components.Add(new Transition(type, Position, target, time, (Vector2 vector) => { Position = vector; }, elastic, onExpired, terminationToken));
             }
             protected virtual void Draw(GameTime gameTime)
             {

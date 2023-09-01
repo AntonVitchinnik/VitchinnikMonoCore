@@ -3,7 +3,7 @@ using System.Collections;
 
 namespace VitchinnikMonoCore.GUI
 {
-    class GUICombo : GUIElement, IList<GUIElement>
+    public class GUICombo : GUIElement, IList<GUIElement>
     {
         private List<GUIElement> _elements;
         public GUICombo() : base() { }
