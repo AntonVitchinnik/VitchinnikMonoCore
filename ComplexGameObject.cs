@@ -19,15 +19,15 @@ namespace VitchinnikMonoCore
     /// </summary>
     public class ComplexGameObject : GameObject
     {
-        protected List<ObjectPartView> _partViews = new();
-        protected Dictionary<int, ObjectPartModel> _partModels = new();
-        protected Dictionary<int, Action> _hoverPartEnter = new();
-        protected Dictionary<int, Action> _hoverPartExit = new();
-        protected Dictionary<int, string> _tooltipPart = new();
-        protected List<Action> _partShow = new();
-        protected List<Action> _partHide = new();
-        protected Dictionary<int, Action> _enablePart = new();
-        protected Dictionary<int, Action> _disablePart = new();
+        protected List<ObjectPartView> _partViews = new List<ObjectPartView>();
+        protected Dictionary<int, ObjectPartModel> _partModels = new Dictionary<int, ObjectPartModel>();
+        protected Dictionary<int, Action> _hoverPartEnter = new Dictionary<int, Action>();
+        protected Dictionary<int, Action> _hoverPartExit = new Dictionary<int, Action>();
+        protected Dictionary<int, string> _tooltipPart = new Dictionary<int, string>();
+        protected List<Action> _partShow = new List<Action>();
+        protected List<Action> _partHide = new List<Action>();
+        protected Dictionary<int, Action> _enablePart = new Dictionary<int, Action>();
+        protected Dictionary<int, Action> _disablePart = new Dictionary<int, Action>();
         protected int _hoveredPartIndex = -1;
         public event Action<int> HoverPartEntered;
         public event Action<int> HoverPartLeft;
@@ -42,7 +42,7 @@ namespace VitchinnikMonoCore
         }
         public int NewPart(string path, Vector2 offset)
         {
-            ObjectPartView output = new(this, offset, path);
+            ObjectPartView output = new ObjectPartView(this, offset, path);
             _partViews.Add(output);
             return _partViews.IndexOf(output);
         }

@@ -147,8 +147,8 @@ namespace VitchinnikMonoCore.GUI
             public ListViewView(ListView controlsSource, string path, Vector2 position) : base(controlsSource, path, position)
             {
                 _orientation = Vector2.UnitY;
-                var pointerMovement = (GameTime gameTime) => MovePointer();
-                var subMov = () => controlsSource.UpdateAction += pointerMovement;
+                Action<GameTime> pointerMovement = (GameTime gameTime) => MovePointer();
+                Action subMov = () => controlsSource.UpdateAction += pointerMovement;
                 _enterPointer += () => controlsSource.ClickEvent += subMov;
                 controlsSource.ReleaseEvent += () => controlsSource.UpdateAction -= pointerMovement;
                 _exitPointer += () => controlsSource.ClickEvent -= subMov;

@@ -15,14 +15,14 @@ namespace VitchinnikMonoCore.Transitions
         {
             if(terminationToken != null)
             {
-                var terminate = () =>
+                Action terminate = () =>
                 {
                     Core.GameInstance.Components.Remove(this);
                 };
                 terminate += () => terminationToken.OnTerminate -= terminate;
                 terminationToken.OnTerminate += terminate;
                 
-                var forceExpire = () =>
+                Action forceExpire = () =>
                 {
                     Core.GameInstance.Components.Remove(this);
                     onExpired?.Invoke();
