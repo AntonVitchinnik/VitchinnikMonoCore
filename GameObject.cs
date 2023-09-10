@@ -22,7 +22,7 @@ namespace VitchinnikMonoCore
         /// </summary>
         /// <remarks>В конструкторе класса наследника нужно обязательно инициализировать это поле</remarks>
         protected ObjectModel _model;
-        private Action<GameTime> _callUpdate;
+        internal Action<GameTime> _callUpdate;
         protected event Action<GameTime> UpdateAction
         {
             add
@@ -34,7 +34,7 @@ namespace VitchinnikMonoCore
                 _callUpdate -= value;
             }
         }
-        private Action<GameTime> _callDraw;
+        internal Action<GameTime> _callDraw;
         protected event Action<GameTime> DrawAction
         {
             add
@@ -74,9 +74,15 @@ namespace VitchinnikMonoCore
         }
         public event Action<Vector2> ViewPositionChanged;
         public bool IsHovered { get; private protected set; }
+        internal Func<bool> ContainsValidator;
+        internal Func<Vector2, Vector2> ContainingVectorTransformation;
+        internal Func<bool> VisibleSource;
         public GameObject() : base(Core.GameInstance)
         {
             Enabled = true;
+            ContainsValidator = () => true;
+            ContainingVectorTransformation = (Vector2 vector) => vector;
+            VisibleSource = () => Visible;
         }
         public void Enable()
         {
@@ -113,7 +119,7 @@ namespace VitchinnikMonoCore
         }
         public virtual bool Contains(Vector2 vector)
         {
-            var output = Visible && _view?.Contains(vector) == true;
+            var output = (VisibleSource() && _view?.Contains(ContainingVectorTransformation(vector)) == true) && ContainsValidator();
             if (output && !IsHovered)
             {
                 HoverEnter();
