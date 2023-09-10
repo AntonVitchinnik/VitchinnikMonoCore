@@ -8,7 +8,7 @@ namespace VitchinnikMonoCore.GUI
 {
     public class GUICombo : GUIElement, IList<GUIElement>
     {
-        private List<GUIElement> _elements;
+        internal List<GUIElement> _elements;
         public GUICombo() : base() { }
         /// <summary>
         /// Конструктор графического пользовательского интерфейса с предзаданным фоном
@@ -17,11 +17,11 @@ namespace VitchinnikMonoCore.GUI
         /// <param name="vector">Точка привязки пользовательского интерфейса</param>
         public GUICombo(string path, Vector2 vector) : base(path, vector)
         {
-
+            _elements = new List<GUIElement>();
         }
         public GUICombo(string path, Vector2 vector, ref Action<Texture2D> textureProvider) : base(path, vector, ref textureProvider)
         {
-
+            _elements = new List<GUIElement>();
         }
         public GUIElement this[int index] { get => ((IList<GUIElement>)_elements)[index]; set => ((IList<GUIElement>)_elements)[index] = value; }
         public int Count => ((ICollection<GUIElement>)_elements).Count;
@@ -36,5 +36,13 @@ namespace VitchinnikMonoCore.GUI
         public bool Remove(GUIElement item) => ((ICollection<GUIElement>)_elements).Remove(item);
         public void RemoveAt(int index) => ((IList<GUIElement>)_elements).RemoveAt(index);
         IEnumerator IEnumerable.GetEnumerator() => ((IEnumerable)_elements).GetEnumerator();
+        public override void Draw(GameTime gameTime)
+        {
+            base.Draw(gameTime);
+            foreach(var element in _elements)
+            {
+                element.Draw(gameTime);
+            }
+        }
     }
 }

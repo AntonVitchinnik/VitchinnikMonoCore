@@ -7,6 +7,7 @@ namespace VitchinnikMonoCore.GUI
 {
     public abstract class GUIElement : GameObject
     {
+        public Vector2 Dimentions => (_view as GUIElementView).Dimentions;
         public event Action<GUIElement> Attached;
         public event Action<GUIElement> Detached;
         public GUIElement() : base()
@@ -35,16 +36,28 @@ namespace VitchinnikMonoCore.GUI
         {
             Attached?.Invoke(parrentElement);
             DrawOrder = parrentElement.DrawOrder + 1;
+            if(parrentElement is GUICombo)
+            {
+                ((parrentElement) as GUICombo).Add(this);
+                Visible = false;
+                VisibleSource = () => parrentElement.VisibleSource();
+            }
         }
         public void DetachFrom(GUIElement parrentElement)
         {
             Detached?.Invoke(parrentElement);
-            DrawOrder = parrentElement.DrawOrder - 1;
+            DrawOrder = parrentElement.DrawOrder;
+            if (parrentElement is GUICombo)
+            {
+                ((parrentElement) as GUICombo).Remove(this);
+                Visible = true;
+                VisibleSource = () => Visible;
+            }
         }
         protected class GUIElementView : ObjectView, IContentContainer, IContentPositionProvider
         {
             protected Vector2 _relatedPosition;
-            protected Vector2 RelatedPosition => _relatedPosition;
+            public Vector2 RelatedPosition => _relatedPosition;
             public Vector2 Dimentions => _texture.Bounds.Size.ToVector2();
             public event Action<GameTime> CallContent;
             public event Action<Vector2> PositionProvider;
