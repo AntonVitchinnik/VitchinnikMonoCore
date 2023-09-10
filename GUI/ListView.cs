@@ -15,8 +15,21 @@ namespace VitchinnikMonoCore.GUI
         private List<ListViewItem> _items;
         private List<Action> _recalculateCall;
         private List<Action<GameTime>> _callItemsDraw;
-        private List<int> _selectedItems;
-        public int SelectedItem { get => _selectedItems[0]; private set => _selectedItems[0] = value; }
+        private List<int> _selectedItems = new List<int>(1);
+        public int SelectedItem { get => _selectedItems[0]; private set
+            {
+                if(_selectedItems.Count>0)
+                {
+                    _selectedItems[0] = value;
+                }
+                else
+                {
+                    _selectedItems.Add(value);
+                }
+                ItemSelected?.Invoke(value);
+            } 
+        }
+        public event Action<int> ItemSelected;
         public int[] SelectedItems => _selectedItems.ToArray();
         public bool Selectable { get; private set; }
         public bool MultiSelect { get; private set; }
@@ -92,11 +105,19 @@ namespace VitchinnikMonoCore.GUI
         {
             _items[index].Clicked += action;
         }
-
+        public void Select(int index)
+        {
+            _items[index].Selected = true;
+            SelectedItem = index;
+        }
 
         public void SetContent(int index, ObjectContent content)
         {
             _items[index].SetContent(content);
+        }
+        public void SetTooltip(int index, Tooltip tooltip)
+        {
+            _items[index].Tooltip = tooltip;
         }
         protected IEnumerator<ListViewItem> GetEnumerator() => _items.GetEnumerator();
         protected class ListViewView : GUIElementView
@@ -149,11 +170,19 @@ namespace VitchinnikMonoCore.GUI
                 _orientation = Vector2.UnitY;
                 Action<GameTime> pointerMovement = (GameTime gameTime) => MovePointer();
                 Action subMov = () => controlsSource.UpdateAction += pointerMovement;
-                _enterPointer += () => controlsSource.ClickEvent += subMov;
+                _enterPointer += () => controlsSource.PressEvent += subMov;
                 controlsSource.ReleaseEvent += () => controlsSource.UpdateAction -= pointerMovement;
-                _exitPointer += () => controlsSource.ClickEvent -= subMov;
-                _enterScrollBar += () => controlsSource.ClickEvent += subMov;
-                _exitScrollBar += () => controlsSource.ClickEvent -= subMov;
+                _exitPointer += () => controlsSource.PressEvent -= subMov;
+                _enterScrollBar += () => controlsSource.PressEvent += subMov;
+                _exitScrollBar += () => controlsSource.PressEvent -= subMov;
+                EnterItem += (int item) =>
+                {
+                    Tooltip.Actual = controlsSource._items[item].Tooltip;
+                };
+                ExitItem += (int item) =>
+                {
+                    Tooltip.Actual = new NullTooltip();
+                };
                 _callItemsRenderer += (GameTime gameTime) =>
                 {
                     Core.GameInstance.GraphicsDevice.SetRenderTarget(_itemsRenderer);
@@ -164,7 +193,7 @@ namespace VitchinnikMonoCore.GUI
                     }
                     Core.GameInstance.GraphicsDevice.SetRenderTarget(Core.DefaultRenderTarget);
                     Core.SpriteBatchInstance.Begin(samplerState: SamplerState.PointClamp);
-                    Core.SpriteBatchInstance.Draw(_itemsRenderer, Position + _padding, CropItems, Color.White);
+                    Core.SpriteBatchInstance.Draw(_itemsRenderer, Position + RelatedPosition + _padding, CropItems, Color.White);
                     Core.SpriteBatchInstance.End();
                 };
                 _callItemsContain += (Vector2 vector) =>
@@ -252,7 +281,7 @@ namespace VitchinnikMonoCore.GUI
             }
             private void MovePointer()
             {
-                PointerPosition = _lastChecked - Position - _scrollBarPosition;
+                PointerPosition = _lastChecked - Position - RelatedPosition - _scrollBarPosition;
             }
             public override bool Contains(Vector2 vector)
             {
@@ -301,7 +330,7 @@ namespace VitchinnikMonoCore.GUI
                         _exitScrollBar.Invoke();
                         ScrollBarHovered = false;
                     }
-                    _callItemsContain(vector - Position - _padding + _itemsOffset);
+                    _callItemsContain(vector - Position - RelatedPosition - _padding + _itemsOffset);
                     return true;
                 }
                 else
@@ -328,10 +357,8 @@ namespace VitchinnikMonoCore.GUI
             {
                 base.Draw(gameTime);
                 Core.SpriteBatchInstance.Begin(samplerState: SamplerState.PointClamp);
-                Core.SpriteBatchInstance.Draw(_scrollBarTexture, Position + _scrollBarPosition, null, Color.White, 0f, _scrollBarOffset, 1f, 0, 1);
-                Core.SpriteBatchInstance.End();
-                Core.SpriteBatchInstance.Begin(samplerState: SamplerState.PointClamp);
-                Core.SpriteBatchInstance.Draw(_pointerTexture, Position + _scrollBarPosition + _pointerPosition, null, Color.White, 0f, _pointerOffset, 1f, 0, 1);
+                Core.SpriteBatchInstance.Draw(_scrollBarTexture, Position + RelatedPosition + _scrollBarPosition, null, Color.White, 0f, _scrollBarOffset, 1f, 0, 1);
+                Core.SpriteBatchInstance.Draw(_pointerTexture, Position + RelatedPosition + _scrollBarPosition + _pointerPosition, null, Color.White, 0f, _pointerOffset, 1f, 0, 1);
                 Core.SpriteBatchInstance.End();
                 _callItemsRenderer.Invoke(gameTime);
             }
@@ -350,7 +377,7 @@ namespace VitchinnikMonoCore.GUI
                     }
                 };
             }
-            protected override void OnClick()
+            protected override void OnPress()
             {
                 _defaultClickAction.Invoke();
             }
@@ -364,10 +391,11 @@ namespace VitchinnikMonoCore.GUI
             private bool _selected;
             public event Action<int> SelectionEvent;
             public event Action<int> DeselectionEvent;
+            public Tooltip Tooltip = new NullTooltip();
             public bool Selected
             {
                 get => _selected;
-                private set
+                set
                 {
                     if (_selected == value)
                         return;
@@ -392,7 +420,18 @@ namespace VitchinnikMonoCore.GUI
                 owner._callItemsDraw.Add(Draw);
                 RecalculatePosition();
                 if (owner.Selectable)
-                    Clicked += () => Selected = true;
+                    Clicked += () => 
+                    { 
+                        Selected = true;
+                        if (owner.MultiSelect)
+                        {
+                            owner._selectedItems.Add(owner._items.IndexOf(this));
+                        }
+                        else
+                        {
+                            owner.SelectedItem = owner._items.IndexOf(this);
+                        }
+                    };
                 if (!owner.MultiSelect)
                     SelectionEvent += (int item) => owner.DeselectAll();
             }

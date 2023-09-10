@@ -53,10 +53,15 @@ namespace VitchinnikMonoCore
         public event Action DisableEvent;
         public event Action HoverEntered;
         public event Action HoverLeft;
-        public event Action ClickEvent;
+        public event Action PressEvent;
         public event Action ReleaseEvent;
-        private bool _clicked;
-        public bool Clicked => _clicked;
+        /// <summary>
+        /// Invoked when released while hovered
+        /// </summary>
+        public event Action ClickEvent;
+        private Vector2 _pressPosition;
+        private bool _pressed;
+        public bool Pressed => _pressed;
         public Vector2? Position
         {
             get => _view?.Position;
@@ -122,15 +127,30 @@ namespace VitchinnikMonoCore
         }
         private protected virtual void Click()
         {
+            if (ClickBreakCondition()) return;
             ClickEvent?.Invoke();
-            _clicked = true;
+        }
+        protected virtual bool ClickBreakCondition()
+        {
+            return _pressPosition != MouseHandler.Position;
+        }
+        private void Press()
+        {
+            if (!Enabled) return;
+            PressEvent?.Invoke();
+            _pressed = true;
+            _pressPosition = MouseHandler.Position;
         }
         private protected virtual void Release()
         {
-            if (_clicked)
+            if (_pressed)
             {
                 ReleaseEvent?.Invoke();
-                _clicked = false;
+                _pressed = false;
+                if(MouseHandler.HoveredObjects.Count > 0 && MouseHandler.HoveredObjects[0].Equals(this))
+                {
+                    Click();
+                }
                 if (IsHovered)
                     return;
                 UnbindClickInvokeAction();
@@ -139,16 +159,16 @@ namespace VitchinnikMonoCore
         internal void BindClickInvokeAction()
         {
             _tooltipShow?.Invoke();
-            MouseHandler.LMBPressed += Click;
-            if (_clicked)
+            MouseHandler.LMBPressed += Press;
+            if (_pressed)
                 return;
             MouseHandler.LMBReleased += Release;
         }
         internal void UnbindClickInvokeAction()
         {
             _tooltipHide?.Invoke();
-            MouseHandler.LMBPressed -= Click;
-            if (_clicked)
+            MouseHandler.LMBPressed -= Press;
+            if (_pressed)
                 return;
             MouseHandler.LMBReleased -= Release;
         }
@@ -156,14 +176,14 @@ namespace VitchinnikMonoCore
         public void Show() => Visible = true;
         public void SetTooltip(Tooltip tooltip)
         {
+            if (tooltip == null)
+            {
+                _tooltipShow = null;
+                _tooltipHide = null;
+                return;
+            }
             _tooltipShow = () => Tooltip.Actual = tooltip;
             _tooltipHide = () => Tooltip.Actual = new NullTooltip();
-        }
-        public void Teleport(Vector2 target)
-        {
-            if (_view == null)
-                return;
-            _view.Position = target;
         }
         public void Move(Transition.Type type, Vector2 target, float time, float elastic = 1f, Action onExpired = null, TransitionTerminationToken terminationToken = null)
         {
@@ -321,8 +341,9 @@ namespace VitchinnikMonoCore
                     OnHoverExit();
                     controlsSource._callUpdate -= OnHover;
                 };
-                controlsSource.ClickEvent += OnClick;
+                controlsSource.PressEvent += OnPress;
                 controlsSource.ReleaseEvent += OnRelease;
+                controlsSource.ClickEvent += OnClick;
             }
             protected ObjectModel()
             {
@@ -349,6 +370,10 @@ namespace VitchinnikMonoCore
 
             }
             protected virtual void OnHoverExit()
+            {
+
+            }
+            protected virtual void OnPress()
             {
 
             }

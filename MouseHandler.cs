@@ -205,6 +205,7 @@ namespace VitchinnikMonoCore
             HoveredObjects = new List<GameObject>();
             LastBindedObject?.UnbindClickInvokeAction();
             LastBindedObject = null;
+            PositionChanged = null;
             LMBPressed = null;
             LMBReleased = null;
             ScrollChanged = null;

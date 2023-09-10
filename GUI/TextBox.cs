@@ -14,7 +14,7 @@ namespace VitchinnikMonoCore.GUI
         public TextBox(string path, Vector2 position, SpriteFont font) : base(path, position)
         {
             _model = new TextBoxModel(this);
-            ClickEvent += Toggle;
+            PressEvent += Toggle;
             var content = new ObjectContent(ref TextChanged, font);
             (_view as GUIElementView).SetContent(content);
             TextChanged += (string text) => content.AllignCentre();
@@ -101,6 +101,7 @@ namespace VitchinnikMonoCore.GUI
                     _text = _text.Remove(_charIndex - 2, 1);
                     _charIndex -= 1;
                     _charIndex = Math.Clamp(_charIndex, 1, Text.Length);
+                    TextChanged.Invoke(_text);
                     return;
                 }
                 _text = _text.Insert(_charIndex - 1, symbol);

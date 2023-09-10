@@ -180,13 +180,13 @@ namespace VitchinnikMonoCore
                 {
                     OnHoverEnter();
                     controlsSource.UpdateAction += OnHover;
-                    controlsSource.ClickEvent += OnClick;
+                    controlsSource.PressEvent += OnPress;
                 };
                 controlsSource._hoverPartExit[partIndex] += () =>
                 {
                     OnHoverExit();
                     controlsSource.UpdateAction -= OnHover;
-                    controlsSource.ClickEvent -= OnClick;
+                    controlsSource.PressEvent -= OnPress;
                 };
                 controlsSource._enablePart.TryAdd(partIndex,() =>
                 {
