@@ -1,5 +1,8 @@
 ﻿using Microsoft.Xna.Framework;
+using System.Collections.Generic;
 using System.Collections;
+using System;
+using Microsoft.Xna.Framework.Graphics;
 
 namespace VitchinnikMonoCore.GUI
 {
@@ -13,6 +16,10 @@ namespace VitchinnikMonoCore.GUI
         /// <param name="path">Путь к файлу фона</param>
         /// <param name="vector">Точка привязки пользовательского интерфейса</param>
         public GUICombo(string path, Vector2 vector) : base(path, vector)
+        {
+
+        }
+        public GUICombo(string path, Vector2 vector, ref Action<Texture2D> textureProvider) : base(path, vector, ref textureProvider)
         {
 
         }

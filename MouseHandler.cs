@@ -1,5 +1,8 @@
 ﻿using Microsoft.Xna.Framework.Input;
 using Microsoft.Xna.Framework;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace VitchinnikMonoCore
 {
@@ -187,13 +190,13 @@ namespace VitchinnikMonoCore
         }
         public static void Enable()
         {
-            if (_updateAction?.GetInvocationList().Contains(DoUpdate) == true)
+            if (_updateAction?.GetInvocationList().Contains(new Action<GameTime>(DoUpdate)) == true)
                 return;
             _updateAction += DoUpdate;
         }
         public static void Disable()
         {
-            if (!_updateAction?.GetInvocationList().Contains(DoUpdate) == true)
+            if (!_updateAction?.GetInvocationList().Contains(new Action<GameTime>(DoUpdate)) == true)
                 return;
             _updateAction -= DoUpdate;
         }
@@ -202,6 +205,7 @@ namespace VitchinnikMonoCore
             HoveredObjects = new List<GameObject>();
             LastBindedObject?.UnbindClickInvokeAction();
             LastBindedObject = null;
+            PositionChanged = null;
             LMBPressed = null;
             LMBReleased = null;
             ScrollChanged = null;

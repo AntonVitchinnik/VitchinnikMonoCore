@@ -1,12 +1,14 @@
 ﻿using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework;
 using VitchinnikMonoCore.Content;
+using System;
 
 namespace VitchinnikMonoCore.GUI
 {
     public abstract class GUIElement : GameObject
     {
         public event Action<GUIElement> Attached;
+        public event Action<GUIElement> Detached;
         public GUIElement() : base()
         {
             DrawOrder = 4;
@@ -34,6 +36,11 @@ namespace VitchinnikMonoCore.GUI
             Attached?.Invoke(parrentElement);
             DrawOrder = parrentElement.DrawOrder + 1;
         }
+        public void DetachFrom(GUIElement parrentElement)
+        {
+            Detached?.Invoke(parrentElement);
+            DrawOrder = parrentElement.DrawOrder - 1;
+        }
         protected class GUIElementView : ObjectView, IContentContainer, IContentPositionProvider
         {
             protected Vector2 _relatedPosition;
@@ -45,13 +52,19 @@ namespace VitchinnikMonoCore.GUI
             {
                 controlsSource.Attached += (GUIElement element) =>
                 {
-                    element.ViewPositionChanged += (Vector2 newPosition) =>
-                    {
-                        _relatedPosition = newPosition;
-                        PositionProvider?.Invoke(_relatedPosition + Position);
-                    };
+                    element.ViewPositionChanged += HandleParrentPosition;
                     _relatedPosition = element.Position ?? Vector2.Zero;
                 };
+                controlsSource.Detached += (GUIElement element) =>
+                {
+                    element.ViewPositionChanged -= HandleParrentPosition;
+                    _relatedPosition = Vector2.Zero;
+                };
+            }
+            private void HandleParrentPosition(Vector2 parrentPosition)
+            {
+                _relatedPosition = parrentPosition;
+                PositionProvider?.Invoke(parrentPosition + Position);
             }
             public GUIElementView(GUIElement controlsSource, string path, Vector2 position) : this(controlsSource, path)
             {
@@ -64,7 +77,7 @@ namespace VitchinnikMonoCore.GUI
                     element.ViewPositionChanged += (Vector2 newPosition) =>
                     {
                         _relatedPosition = newPosition;
-                        PositionProvider?.Invoke(_relatedPosition);
+                        PositionProvider?.Invoke(_relatedPosition + Position);
                     };
                     _relatedPosition = element.Position ?? Vector2.Zero;
                 };
@@ -87,6 +100,7 @@ namespace VitchinnikMonoCore.GUI
                     return;
                 }
                 content.AllignCentre();
+                PositionChanged += (Vector2 vector) => PositionProvider.Invoke(vector + _relatedPosition);
             }
             protected override void Draw(GameTime gameTime)
             {

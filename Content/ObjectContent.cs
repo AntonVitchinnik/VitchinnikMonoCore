@@ -1,6 +1,7 @@
 ﻿using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework;
 using VitchinnikMonoCore.GUI;
+using System;
 
 namespace VitchinnikMonoCore.Content
 {
@@ -73,8 +74,16 @@ namespace VitchinnikMonoCore.Content
                 _centreAction?.Invoke();
             };
         }
-        // Необходимо добавить некоторую стартовую картинку для варианта с провайдером изображений
         public ObjectContent(ref Action<Texture2D> imageProvider) : this("null_image")
+        {
+            imageProvider += (Texture2D image) =>
+            {
+                this.Image = image;
+                LastAlignment?.Invoke();
+                _centreAction?.Invoke();
+            };
+        }
+        public ObjectContent(string path, ref Action<Texture2D> imageProvider) : this(path)
         {
             imageProvider += (Texture2D image) =>
             {
