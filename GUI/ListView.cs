@@ -490,7 +490,7 @@ namespace VitchinnikMonoCore.GUI
     public class ListView : GUIElement 
     {
         private List<ListViewItem> _items;
-        public Vector2 ItemsSize => _items[_items.Count - 1].Content.Position ?? Vector2.Zero + _items[_items.Count - 1].Content.Dimentions;
+        public Vector2 ItemsSize => (_items[_items.Count - 1].Content.Position ?? Vector2.Zero) + _items[_items.Count - 1].Content.Dimentions;
         public event Action ItemAdded;
         public event Action ItemRemoved;
         public ListView(string path, Vector2 position)
@@ -526,6 +526,7 @@ namespace VitchinnikMonoCore.GUI
         public void Add(GUIElement item)
         {
             item.Visible = false;
+            item.DrawOrder = DrawOrder + 1;
             item.VisibleSource = () => VisibleSource();
             var newItem = new ListViewItem(this, item);
             Core.GameInstance.Components.Insert(Core.GameInstance.Components.IndexOf(this) + 1, item);
@@ -533,6 +534,7 @@ namespace VitchinnikMonoCore.GUI
             {
                 foreach(var element in (item as GUICombo)._elements)
                 {
+                    element.DrawOrder = item.DrawOrder + 1;
                     Core.GameInstance.Components.Insert(Core.GameInstance.Components.IndexOf(this) + 1, element);
                 }              
             }
@@ -576,7 +578,7 @@ namespace VitchinnikMonoCore.GUI
 
             #region "List controls drawing stuff"
             private Vector2 _padding;
-            public Vector2 Padding;
+            public Vector2 Padding => _padding;
             private Vector2 _innerSize;
             private Texture2D _scrollBarTexture;
             private Vector2 _scrollBarPosition;
@@ -626,7 +628,10 @@ namespace VitchinnikMonoCore.GUI
                 Action<GameTime> pointerMovement = (GameTime gameTime) => MovePointer();
                 Action subMov = () => controlsSource.UpdateAction += pointerMovement;
                 controlsSource.ReleaseEvent += () => controlsSource.UpdateAction -= pointerMovement;
-                controlsSource.ItemAdded += () => _itemsSize = controlsSource.ItemsSize;
+                controlsSource.ItemAdded += () => {
+                    _itemsSize = controlsSource.ItemsSize;
+                    OnPointerMove(PointerPosition);
+                };
                 _isNotEmpty = () => controlsSource._items.Count > 0;
                 _enterPointer += () => controlsSource.PressEvent += subMov;               
                 _exitPointer += () => controlsSource.PressEvent -= subMov;
@@ -700,6 +705,7 @@ namespace VitchinnikMonoCore.GUI
                     {
                         ItemsCanBeHovered = false;
                     }
+                    ItemsCanBeHovered = true;
 
                     return true;
                 }
@@ -715,6 +721,7 @@ namespace VitchinnikMonoCore.GUI
                         _exitScrollBar.Invoke();
                         ScrollBarHovered = false;
                     }
+                    
                     return false;
                 }
             }
@@ -731,6 +738,7 @@ namespace VitchinnikMonoCore.GUI
                 var value = position.Length() / _borderValue;
                 if ((_itemsSize * _orientation).Length() > (_innerSize * _orientation).Length())
                     _itemsOffset = (_itemsSize - _innerSize) * value * Orientation;
+                else _itemsOffset = Vector2.Zero;
             }
             protected override void Draw(GameTime gameTime)
             {
@@ -760,8 +768,6 @@ namespace VitchinnikMonoCore.GUI
             private GUIElement _content;
             public GUIElement Content => _content;
             private ListView _owner;
-            private int _comboCounter = 0;
-            private bool _last = false;
             public ListViewItem(ListView owner, GUIElement content)
             {
                 _content = content;
@@ -771,12 +777,14 @@ namespace VitchinnikMonoCore.GUI
                     {
                         foreach(var element in (_content as GUICombo)._elements)
                         {
-                            element.ContainsValidator = () => (_owner._view as ListViewView).ItemsCanBeHovered && _owner.Visible;
-                            element.ContainingVectorTransformation = (Vector2 vector) => { return vector - (_owner._view as ListViewView).Position - (_owner._view as ListViewView).RelatedPosition - (_owner._view as ListViewView).Padding + (_owner._view as ListViewView).ItemsOffset; };
+                            element.ContainsValidator = () => (_owner._view as ListViewView).ItemsCanBeHovered && _owner.VisibleSource();
+                            element.ContainingVectorTransformation = (Vector2 vector) => {
+                                return vector - (_owner._view as ListViewView).Position - (_owner._view as ListViewView).RelatedPosition - (_owner._view as ListViewView).Padding + (_owner._view as ListViewView).ItemsOffset;
+                            };
                         }
                     }              
                 }
-                _content.ContainsValidator = () => (_owner._view as ListViewView).ItemsCanBeHovered && _owner.Visible;
+                _content.ContainsValidator = () => (_owner._view as ListViewView).ItemsCanBeHovered && _owner.VisibleSource(); // OWNER IS INVISIBLE!!!!!!
                 _content.ContainingVectorTransformation = (Vector2 vector) => { return vector - (_owner._view as ListViewView).Position - (_owner._view as ListViewView).RelatedPosition - (_owner._view as ListViewView).Padding + (_owner._view as ListViewView).ItemsOffset; };
                 _owner = owner;
                 _owner._items.Add(this);

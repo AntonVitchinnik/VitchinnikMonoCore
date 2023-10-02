@@ -66,12 +66,12 @@ namespace VitchinnikMonoCore.GUI
                 controlsSource.Attached += (GUIElement element) =>
                 {
                     element.ViewPositionChanged += HandleParrentPosition;
-                    _relatedPosition = element.Position ?? Vector2.Zero;
+                    HandleParrentPosition(element.Position ?? Vector2.Zero);
                 };
                 controlsSource.Detached += (GUIElement element) =>
                 {
                     element.ViewPositionChanged -= HandleParrentPosition;
-                    _relatedPosition = Vector2.Zero;
+                    HandleParrentPosition(Vector2.Zero);
                 };
             }
             private void HandleParrentPosition(Vector2 parrentPosition)
@@ -85,6 +85,7 @@ namespace VitchinnikMonoCore.GUI
             }
             public GUIElementView(GUIElement controlsSource, string path, ref Action<Texture2D> textureProvider) : base(controlsSource, path, Vector2.Zero, ref textureProvider)
             {
+                //maybe fix this constructor
                 controlsSource.Attached += (GUIElement element) =>
                 {
                     element.ViewPositionChanged += (Vector2 newPosition) =>

@@ -8,6 +8,7 @@ namespace VitchinnikMonoCore
     public static class Core
     {
         public static Game GameInstance { get; private set; }
+        //need tryLoad resources
         public static ContentManager ContentManagerInstance { get; private set; }
         public static SpriteBatch SpriteBatchInstance { get; private set; }
         public static RenderTarget2D DefaultRenderTarget { get; internal set; }

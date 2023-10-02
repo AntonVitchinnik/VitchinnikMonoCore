@@ -115,6 +115,7 @@ namespace VitchinnikMonoCore
         private void HoverLeave()
         {
             IsHovered = false;
+            MouseHandler.HoveredObjects.Remove(this);
             HoverLeft?.Invoke();
         }
         public virtual bool Contains(Vector2 vector)
@@ -178,8 +179,8 @@ namespace VitchinnikMonoCore
                 return;
             MouseHandler.LMBReleased -= Release;
         }
-        public void Hide() => Visible = false;
-        public void Show() => Visible = true;
+        public virtual void Hide() => Visible = false;
+        public virtual void Show() => Visible = true;
         public void SetTooltip(Tooltip tooltip)
         {
             if (tooltip == null)

@@ -122,7 +122,6 @@ namespace VitchinnikMonoCore
                         HoveredObjects.Add(graphicsObject);
                     continue;
                 }
-                HoveredObjects.Remove(graphicsObject);
             }
             if (HoveredObjects.Count > 0)
             {

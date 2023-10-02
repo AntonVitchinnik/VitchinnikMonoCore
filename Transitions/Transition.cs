@@ -25,10 +25,10 @@ namespace VitchinnikMonoCore.Transitions
                 Action forceExpire = () =>
                 {
                     Core.GameInstance.Components.Remove(this);
-                    onExpired?.Invoke();
+                    onExpired.Invoke();
                 };
-                forceExpire += () => terminationToken.OnForcedExpiration -= forceExpire;
-                terminationToken.OnForcedExpiration += forceExpire;
+                onExpired += () => terminationToken.OnForcedExpiration -= forceExpire;
+                terminationToken.OnForcedExpiration += forceExpire;              
             }
             Vector2 deltaPosition = target - start;
             switch (type)
