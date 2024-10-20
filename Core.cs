@@ -12,12 +12,15 @@ namespace VitchinnikMonoCore
         public static ContentManager ContentManagerInstance { get; private set; }
         public static SpriteBatch SpriteBatchInstance { get; private set; }
         public static RenderTarget2D DefaultRenderTarget { get; internal set; }
-        public static void Initialize(Game game, ContentManager contentManager, SpriteBatch spriteBatch, RenderTarget2D defaultTarget) 
+        public static GraphicsDevice GraphicsDevice { get; internal set; }
+        public static GameScreen ActualScreen { get; internal set; }
+        public static void Initialize(Game game, ContentManager contentManager, SpriteBatch spriteBatch, RenderTarget2D defaultTarget, GraphicsDevice graphicsDevice) 
         {
             GameInstance = game;
             ContentManagerInstance = contentManager;
             SpriteBatchInstance = spriteBatch;
             DefaultRenderTarget = defaultTarget;
+            GraphicsDevice = graphicsDevice;
             MouseHandler.Initialize();
         }
         public static void Update(GameTime gameTime)
